@@ -137,6 +137,8 @@ def make_results_para(clff, l):
 if __name__ == '__main__':
     
     # this creates CSVs of dice coefficients and their errors
+    #!!!Note: this code will take a MINUMUM of 100 hours to run, most likely considerably more, it's best if you run each classifier as you go instead of one after the other
+    
     clff = RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1)
     make_results_para(clff,10)
     clff = KNeighborsClassifier()

@@ -192,21 +192,16 @@ def test_man_seg(afolder):
     return
 
 
-#clff = KNeighborsClassifier()
-#clff = MLPClassifier(alpha=1, max_iter=10000)
 
-#clff = QuadraticDiscriminantAnalysis()
-#clff = RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1)
-#clff = SVC(kernel="linear", C=0.5) # this is trash
-clff = GaussianNB()
-#clff = AdaBoostClassifier()
+if __name__ == '__main__':
 
-
-
-
-#test_man_seg('PdC TEM')
-#test_man_seg('AuGe TEM')
-test_classifier_mult('Pt ADF', clff, p=[1,16,20], n=1)
-#test_classifier_mult('PdPtNiAu ADF', clff, p=[1,16,20], n=1)
-#test_classifier_mult('PdC TEM', clff, p=[4,64,20], n=1)
-#test_classifier_mult('AuGe TEM', clff, p=[4,64,20], n=1)
+    #this code will generate dice coefficients for each image for each data set, over 4 different classifiers
+    ims = ['AuGe TEM','PdC TEM','Pt ADF','PdPtNiAu ADF']
+    clfs = [GaussianNB(),QuadraticDiscriminantAnalysis(),RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1),KNeighborsClassifier()]
+    for clf in clfs:
+        for im in ims:
+            if im == 'AuGe TEM' or im == 'PdC TEM':
+                p= [4,64,20]
+            else:
+                p=[1,16,20]
+            test_classifier_mult(im,clf,p=p)
