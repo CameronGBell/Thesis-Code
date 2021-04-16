@@ -14,8 +14,8 @@ import time
 
 def test_classifier(afolder, clf):
 
-    folderi = "C:/Users/cimca/Google Drive (cameronbell2236@gmail.com)/Diamond/Python Stuff/Ground truth/{}/image".format(afolder)
-    folderm = "C:/Users/cimca/Google Drive (cameronbell2236@gmail.com)/Diamond/Python Stuff/Ground truth/{}/mask".format(afolder)
+    folderi = f"Ground truth/{afolder}/image"
+    folderm = f"Ground truth/{afolder}/mask"
 
     images = []
     masks = []
@@ -40,7 +40,7 @@ def test_classifier(afolder, clf):
 
         masks.append(thing)
 
-    data = open(f"dicedata{afolder}{str(clff)}.csv",'w')
+    data = open(f"results/dicedata{afolder}{str(clf)}.csv",'w')
 
     data.write("pixel accuracy,dice01,dice11,dice00,dice10\n")
 
@@ -77,11 +77,14 @@ def test_classifier(afolder, clf):
     data.close()
     return
 
-def test_classifier_mult(afolder, clf, n=1, p=[1,16,20]):
+def test_classifier_mult(afolder, clf, n=1, parameters=None):
 
-    folderi = "C:/Users/cimca/Google Drive (cameronbell2236@gmail.com)/Diamond/Python Stuff/Ground truth/{}/image".format(afolder)
-    folderm = "C:/Users/cimca/Google Drive (cameronbell2236@gmail.com)/Diamond/Python Stuff/Ground truth/{}/mask".format(afolder)
-    
+    folderi = f"Ground truth/{afolder}/image"
+    folderm = f"Ground truth/{afolder}/mask"
+
+    if parameters == None:
+        params=ps.trainableParameters()
+
     images = []
     masks = []
     names = []
@@ -108,11 +111,11 @@ def test_classifier_mult(afolder, clf, n=1, p=[1,16,20]):
         images.append(normed)
         masks.append(thing)
 
-    data = open(f"dicedata{afolder}{str(clff)}.csv",'w')
+    data = open(f"results/dicedata{afolder}{str(clf)}.csv",'w')
     data.write("pixel accuracy,dice01,dice11,dice00,dice10\n")
 
     tic = time.perf_counter()
-    output, clf = ps.ClusterTrained(images[:n], masks[:n], clf, sigma = p[0], high_sigma = p[1], disk_size = p[2])
+    output, clf = ps.ClusterTrained(images[:n], masks[:n], clf,parameters=parameters)
     #output, clf = ps.ClusterTrained(images[:n], masks[:n], clf, membrane = [1,1,1,1,1,1], texture= True, minimum = True,sigma = p[0], high_sigma = p[1], disk_size = p[2])
     toc = time.perf_counter() - tic
     print('trained classifier in {} seconds'.format(toc))
@@ -122,7 +125,7 @@ def test_classifier_mult(afolder, clf, n=1, p=[1,16,20]):
     if n == 1:
         output = [output]
     for i in range(n,len(masks)):
-        output.append(ps.ClassifierSegment(clf, images[i], sigma = p[0], high_sigma = p[1], disk_size = p[2]))
+        output.append(ps.ClassifierSegment(clf, images[i], parameters=parameters))
         #output.append(ps.ClassifierSegment(clf, images[i], membrane = [1,1,1,1,1,1], texture= True, minimum = True, sigma = p[0], high_sigma = p[1], disk_size = p[2]))
 
     toc = time.perf_counter() - tic
@@ -136,7 +139,7 @@ def test_classifier_mult(afolder, clf, n=1, p=[1,16,20]):
 
         tempp = ps.toggle_channels(2-output[i])
         maskim = Image.fromarray(tempp)
-        maskim.save(names[i])
+        maskim.save(f'results/{names[i]}')
         
         pixacc = ac.check_ground(output[i],masks[i])
         print("accuracy: {}".format(pixacc))
@@ -149,8 +152,8 @@ def test_classifier_mult(afolder, clf, n=1, p=[1,16,20]):
 
 def test_man_seg(afolder):
 
-    folderm = "C:/Users/cimca/Google Drive (cameronbell2236@gmail.com)/Diamond/Python Stuff/Ground truth/{}/mask".format(afolder)
-    folderm2 = "C:/Users/cimca/Google Drive (cameronbell2236@gmail.com)/Diamond/Python Stuff/Ground truth/{}/mask2 EB".format(afolder)
+    folderm = f"Ground truth/{afolder}/mask"
+    folderm2 = f"Ground truth/{afolder}/mask2 EB"
 
     masks = []
     masks2 = []
@@ -175,7 +178,7 @@ def test_man_seg(afolder):
         masks.append(maskfile1)
         masks2.append(maskfile2)
 
-    data = open(f"manual seg{afolder}.csv",'w')
+    data = open(f"Results/manual seg{afolder}.csv",'w')
     data.write("pixel accuracy,dice01,dice11,dice00,dice10\n")
 
     
@@ -201,7 +204,9 @@ if __name__ == '__main__':
     for clf in clfs:
         for im in ims:
             if im == 'AuGe TEM' or im == 'PdC TEM':
-                p= [4,64,20]
+                p=ps.trainableParameters()
+                p.setDiffGaussian(prefilter=False,high_sigma=64)
+                p.setGlobalSigma(4)
             else:
-                p=[1,16,20]
-            test_classifier_mult(im,clf,p=p)
+                p=ps.trainableParameters()
+            test_classifier_mult(im,clf,parameters=p)

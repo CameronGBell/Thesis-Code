@@ -17,8 +17,8 @@ import hyperspy.api as hs
 
 #loads images for para
 def loadims(afolder):
-    folderi = "C:/Users/cimca/Google Drive (cameronbell2236@gmail.com)/Diamond/Python Stuff/Ground truth/{}/image".format(afolder)
-    folderm = "C:/Users/cimca/Google Drive (cameronbell2236@gmail.com)/Diamond/Python Stuff/Ground truth/{}/mask".format(afolder)
+    folderi = f"Ground truth/{afolder}/image"
+    folderm = f"Ground truth/{afolder}/mask"
 
     images = []
     masks = []
@@ -52,13 +52,17 @@ def loadims(afolder):
 def batch_test(clff,pix,imask,output):
     die = np.zeros((2,2,10,4))
     tim = np.zeros((4,1))
-    die[:,:,:,0], tim[0,:] = spr.test_classifier_per(clff, imask[0], pix, p=[4,64,20])
+    
+    die[:,:,:,1], tim[1,:] = spr.test_classifier_per(clff, imask[1],pix)
     print(.1, end='\r')
-    die[:,:,:,1], tim[1,:] = spr.test_classifier_per(clff, imask[1],pix, p=[1,16,20])
+    die[:,:,:,2], tim[2,:] = spr.test_classifier_per(clff, imask[2], pix)
     print(.2, end='\r')
-    die[:,:,:,2], tim[2,:] = spr.test_classifier_per(clff, imask[2], pix, p=[1,16,20])
+    p = ps.trainableParameters()
+    p.setGlobalSigma(4)
+    p.setDiffGaussian(prefilter=False,high_sigma=64)
+    die[:,:,:,3], tim[3,:] = spr.test_classifier_per(clff, imask[3], pix, params=p)
     print(.3, end='\r')
-    die[:,:,:,3], tim[3,:] = spr.test_classifier_per(clff, imask[3], pix, p=[4,64,20])
+    die[:,:,:,0], tim[0,:] = spr.test_classifier_per(clff, imask[0], pix, params=p)
     print(.4, end='\r')
     dietim = (die,tim)
     output.put(dietim)
@@ -67,11 +71,11 @@ def batch_test(clff,pix,imask,output):
 #l is number of runs for each number of pixels
 def make_results_para(clff, l):
 
-    perlist = [2048,4096,8000,16000,32000,64000,128000,256000,512000,1000000]
+    perlist = [2,4,8,16,32,64,128,256,512,1024,2048,4096,8000,16000,32000,64000,128000,256000,512000,1000000]
     if str(clff) == 'KNeighborsClassifier()':
-        perlist = [8000,16000,32000,64000,128000,256000,512000,1000000]
+        perlist = [8,16,32,64,128,256,512,1024,2048,4096,8000,16000,32000,64000,128000,256000,512000,1000000]
     if str(clff) == 'QuadraticDiscriminantAnalysis()':
-        perlist = [64]
+        perlist = [128,256,512,1024,2048,4096,8000,16000,32000,64000,128000,256000,512000,1000000]
 
     #creates image arrays
     imarray = []
@@ -80,7 +84,7 @@ def make_results_para(clff, l):
         imarray.append(loadims(namelist[i]))
 
     #writes first line to file
-    data = open('acc{} prl.csv'.format(str(clff)),'w')
+    data = open('results/acc{} prl.csv'.format(str(clff)),'w')
     data.write('pixels,ln(pix),,')
     for i in range(4):
         data.write('time,sem,die00,sem,die01,sem,die10,sem,die11,sem,prec,sem,rec,sem,,')
@@ -125,7 +129,7 @@ def make_results_para(clff, l):
         stderr= sem(die, axis=2, nan_policy='omit')
         die = die.mean(axis=2)
 
-        data = open('acc{} prl.csv'.format(str(clff)),'a')
+        data = open('results/acc{} prl.csv'.format(str(clff)),'a')
         data.write(f'{perlist[i]},,,')
         for j in range(4):
             data.write(f'{tim[j]},{timsem[j]},{die[0,0,j]},{stderr[0,0,j]},{die[0,1,j]},{stderr[0,1,j]},{die[1,0,j]},{stderr[1,0,j]},{die[1,1,j]},{stderr[1,1,j]},{prec[j]},{precsem[j]},{rec[j]},{recsem[j]},,')

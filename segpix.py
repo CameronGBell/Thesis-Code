@@ -23,13 +23,11 @@ import warnings
 
 
 def ClusterPercent(image, labels, classifier, number, 
-                    intensity = True, 
-                    edges = True, 
-                    texture = False, 
-                    membrane = [1,0,0,0,0,0],
-                    test=False,
-                    sigma = 1, high_sigma = 16, disk_size = 20):
+                    params=None):
 #just does one image trained on a random percentage of the image pixels
+
+    if params == None:
+        params=ps.trainableParameters()
 
     if len(labels.shape) != 2:
             labels = ps.toggle_channels(labels)
@@ -39,7 +37,7 @@ def ClusterPercent(image, labels, classifier, number,
         thin_mask = labels.astype(np.float64)
         image = image.data
 
-        features = ps.CreateFeatures(image, intensity=intensity, edges=edges, texture=texture, membrane=membrane, test=test,sigma=sigma, high_sigma=high_sigma, disk_size=disk_size)
+        features = ps.CreateFeatures(image, parameters=params)
         
         area = image.shape[0]*image.shape[1]
         indexes = np.random.randint(0,high=area,size=number)
@@ -76,18 +74,21 @@ def ClusterPercent(image, labels, classifier, number,
     return output, classifier, toc
 
 
-def test_classifier_per(clf, imask, number, p=[1,16,20]):
+def test_classifier_per(clf, imask, number, params=None):
 
     #tests the classifier trained on a number of an image's pixels. returns the average dice coefficients the number of pixels trained on and 
     
+    if params == None:
+        params=ps.trainableParameters()
+
     images = imask[0]
     masks = imask[1]
 
-    output, clf, clock = ClusterPercent(images[0], masks[0], clf, number, sigma = p[0], high_sigma = p[1], disk_size = p[2])
+    output, clf, clock = ClusterPercent(images[0], masks[0], clf, number, params=params)
 
     output = []
     for i in range(10):
-        output.append(ps.ClassifierSegment(clf, images[i], sigma = p[0], high_sigma = p[1], disk_size = p[2]))
+        output.append(ps.ClassifierSegment(clf, images[i], parameters=params))
 
     alldice = np.zeros((2,2,10))
     for i in range(10):
@@ -109,15 +110,21 @@ def make_results(clff):
     if str(clff) == 'KNeighborsClassifier()':
         perlist = [8,16,32,64,128,256,512,1024,2048,4192,8000,16000,32000]
         
-    data = open('acc{}.csv'.format(str(clff)),'w')
+    data = open('results/acc{}.csv'.format(str(clff)),'w')
     data.write('pixels,ln(pix),,time,die00,die01,die10,die11,,time,die00,die01,die10,die11,,time,die00,die01,die10,die11,\n')
 
+    p = ps.trainableParameters()
+    p.setGlobalSigma(4)
+    p.setDiffGaussian(prefilter=False,high_sigma=64)
+
+    pp = ps.trainableParameters()
     for i in range(len(perlist)):
-        die, tim = test_classifier_per('PdC TEM', clff, perlist[i], p=[4,64,20])
+        
+        die, tim = test_classifier_per('PdC TEM', clff, perlist[i], params=p)
         data.write('{},,,{},{},{},{},{},,'.format(perlist[i],tim,die[0,0],die[0,1],die[1,0],die[1,1]))
-        die, tim = test_classifier_per('Pt ADF', clff, perlist[i], p=[1,16,20])
+        die, tim = test_classifier_per('Pt ADF', clff, perlist[i], params=pp)
         data.write('{},{},{},{},{},,'.format(tim,die[0,0],die[0,1],die[1,0],die[1,1]))
-        die, tim = test_classifier_per('PdPtNiAu ADF', clff, perlist[i], p=[1,16,20], membrane=[1,1,1,1,1,1])
+        die, tim = test_classifier_per('PdPtNiAu ADF', clff, perlist[i], params=pp)
         data.write('{},{},{},{},{}\n'.format(tim,die[0,0],die[0,1],die[1,0],die[1,1]))
 
         print(i)
@@ -129,11 +136,15 @@ def make_results_au(clff):
     if str(clff) == 'KNeighborsClassifier()':
         perlist = [8,16,32,64,128,256,512,1024,2048,4192,8000,16000,32000]
 
-    data = open('acc{}.csv'.format(str(clff)),'w')
+    data = open('results/acc{}.csv'.format(str(clff)),'w')
     data.write('pixels,ln(pix),,time,die00,die01,die10,die11\n')
 
+    p = ps.trainableParameters()
+    p.setGlobalSigma(4)
+    p.setDiffGaussian(prefilter=False,high_sigma=64)
+
     for i in range(len(perlist)):
-        die, tim = test_classifier_per('AuGe TEM', clff, perlist[i], p=[4,64,20])
+        die, tim = test_classifier_per('AuGe TEM', clff, perlist[i], params=p)
         data.write('{},,,{},{},{},{},{}\n'.format(perlist[i],tim,die[0,0],die[0,1],die[1,0],die[1,1]))
 
         print(i)
